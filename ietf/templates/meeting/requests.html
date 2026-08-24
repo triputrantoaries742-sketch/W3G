@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+{# Copyright The IETF Trust 2015-2025, All Rights Reserved #}
+{% load origin %}
+{% load ietf_filters static person_filters textfilters %}
+{% block pagehead %}
+    <link rel="stylesheet" href="{% static "ietf/css/list.css" %}">
+{% endblock %}
+{% block title %}IETF {{ meeting.number }} timeslot requests{% endblock %}
+{% block content %}
+    {% origin %}
+    <h1 class="title">
+        IETF {{ meeting.number }} timeslot requests
+        <br>
+        <small class="text-body-secondary">{{ meeting.city }}, {{ meeting.country }}
+            {% if meeting.venue_name %}– {{ meeting.venue_name }}{% endif %}
+        </small>
+    </h1>
+
+    <h2 class="mt-3">Requests Summary</h2>
+    <p class="mt-2"><em>This summary section focuses on sessions that have conflict lists to manage. It excludes requests from groups of type "team", such as those for the hackathon or for tutorials.</em></p>
+    <div class="mt-3">
+        <table class="table table-sm table-striped">
+            {% for row in summary_by_area %}
+                {% if forloop.first %}
+                    <thead>
+                        <tr class="table-info">
+                            {% for col in row %}
+                                <th scope="col"{% if not forloop.first %} class="text-end"{% endif %}>{{ col }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                {% elif forloop.last %}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            {% for col in row %}
+                                <th scope="col"{% if not forloop.first %} class="text-end"{% endif %}>{{ col }}</th>
+                            {% endfor %}
+                            {# last line is missing two columns? #}
+                            <td></td><td></td>
+                        </tr>
+                    </tfoot>
+                {% else %}
+                    <tr>
+                    {% for col in row %}
+                        {% if forloop.first %}
+                            <th scope="row">{{ col }}</th>
+                        {% else %}
+                            <td class="text-end">{{ col }}</td>
+                        {% endif %}
+                    {% endfor %}
+                    </tr>
+                {% endif %}
+            {% endfor %}
+        </table>
+    </div>
+    <div class="row mt-3">
+        <div class="col">
+            <table class="table table-sm table-striped">
+                {% for row in summary_by_group_type %}
+                    {% if forloop.first %}
+                        <thead>
+                            <tr class="table-info">
+                                {% for col in row %}
+                                    <th scope="col"{% if not forloop.first %} class="text-end"{% endif %}>{{ col }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                    {% else %}
+                        <tr>
+                            {% for col in row %}
+                                {% if forloop.first %}
+                                    <th scope="row">{{ col }}</th>
+                                {% else %}
+                                    <td class="text-end">{{ col }}</td>
+                                {% endif %}
+                            {% endfor %}
+                        </tr>
+                    {% endif %}
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="col">
+            <table class="table table-sm table-striped">
+                {% for row in summary_by_purpose %}
+                    {% if forloop.first %}
+                        <thead>
+                            <tr class="table-info">
+                                {% for col in row %}
+                                    <th scope="col"{% if not forloop.first %} class="text-end"{% endif %}>{{ col }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                    {% else %}
+                        <tr>
+                            {% for col in row %}
+                                {% if forloop.first %}
+                                    <th scope="row">{{ col }}</th>
+                                {% else %}
+                                    <td class="text-end">{{ col }}</td>
+                                {% endif %}
+                            {% endfor %}
+                        </tr>
+                    {% endif %}
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% regroup sessions by display_area as area_sessions %}
+    {% for area in area_sessions %}
+        <h2 class="mt-5" id="{% firstof area.grouper.acronym "other-groups" %}">
+            {% if area.grouper is not None %}
+                {{ area.grouper.acronym|upper }} <small class="text-body-secondary">{{ area.grouper.name }}</small>
+            {% else %}
+                Other Groups
+            {% endif %}
+        </h2>
+        <p class="alert alert-info my-3">
+            <b>No timeslot request received for:</b>
+            {% for group in groups_not_meeting %}
+                {% if group.parent.id == area.grouper.id %}{{ group.acronym }}{% endif %}
+            {% endfor %}
+        </p>
+        <table class="table table-sm table-striped tablesorter">
+            <thead>
+                <tr>
+                    <th scope="col" data-sort="group">Group</th>
+                    <th scope="col" class="d-none d-lg-table-cell" data-sort="count">Length</th>
+                    <th scope="col" class="d-none d-lg-table-cell" data-sort="num">Size</th>
+                    <th scope="col" class="d-none d-lg-table-cell" data-sort="requester">Requester</th>
+                    <th scope="col" class="d-none d-lg-table-cell" data-sort="ad">AD</th>
+                    <th scope="col" data-sort="constraints">Constraints</th>
+                    <th scope="col" data-sort="special">Special requests</th>
+                </tr>
+            </thead>
+            {% for session in area.list %}
+                {% ifchanged session.current_status_name %}
+                    {% if not forloop.first %}</tbody>{% endif %}
+                    <tbody>
+                        <tr>
+                            <th scope="col" class="table-warning" colspan="7">{{ session.current_status_name|capfirst }}</th>
+                        </tr>
+                    </tbody>
+                    <tbody>
+                {% endifchanged %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'ietf.meeting.views_session_request.edit_request' num=meeting.number acronym=session.group.acronym %}">
+                                {{ session.group.acronym }}
+                            </a>
+                            {% if session.purpose_id != "regular" and session.purpose_id != "none" %}
+                                <br><span class="badge rounded-pill text-bg-info">{{session.purpose}}</span>
+                            {% endif %}
+                            {% if session.joint_with_groups.count %}joint with {{ session.joint_with_groups_acronyms|join:' ' }}{% endif %}
+                            {% if session.requested_duration %}
+                                <div class="d-lg-none">
+                                <i class="bi bi-stopwatch-fill"></i> {{ session.requested_duration|stringformat:"s"|slice:"0:4" }}
+                                </div>
+                            {% endif %}
+                            {% if session.attendees %}
+                                <div class="d-lg-none">
+                                    <i class="bi bi-people-fill"></i> {{ session.attendees }}
+                                </div>
+                            {% endif %}
+                            {% if session.group.state.slug != "active" %}
+                                <br><span class="badge rounded-pill text-bg-success">{{ session.group.state.name }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="d-none d-lg-table-cell">
+                            {% if session.requested_duration %}{{ session.requested_duration|stringformat:"s"|slice:"0:4" }}{% endif %}
+                        </td>
+                        <td class="d-none d-lg-table-cell">{{ session.attendees|default:"" }}</td>
+                        <td class="d-none d-lg-table-cell">{% person_link session.requested_by_person with_email=False %}</td>
+                        <td class="d-none d-lg-table-cell">
+                            {% if session.group.ad_role %}
+                                {% person_link session.group.ad_role.person with_email=False %}
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if session.requested_duration %}
+                                {% regroup session.constraints by name as prioritized_constraints %}
+                                {% for grouped_constraint in prioritized_constraints %}
+                                    <div{% if not forloop.last %} class="mb-2"{% endif %}>
+                                    <b>{{ grouped_constraint.grouper.name }}:</b>
+                                    {% for constraint in grouped_constraint.list %}
+                                        {% with constraint.target.parent.id as constraint_target_parent_id %}
+                                            {% with constraint.source.parent.id as constraint_source_parent_id %}
+                                                {% with constraint.person as constraint_person %}
+                                                    {% if constraint_target_parent_id == constraint_source_parent_id and not constraint_person %}<b>{% endif %}
+                                                    {% if constraint.name.slug == "bethere" %}{% person_link constraint_person with_email=False %}{% else %}
+                                                        {% with constraint.name.slug as constraint_name_slug %}
+                                                            <span class="{% if constraint_name_slug == 'chair_conflict' %}text-danger{% elif constraint_name_slug == 'tech_overlap' %}text-info{% elif constraint_name_slug == 'key_participant' %}text-success{% else %}{{ constraint_name_slug }}{% endif %}">
+                                                            {% endwith %}
+                                                            {{ constraint.brief_display.strip }}</span>{% endif %}{% if constraint_target_parent_id == constraint_source_parent_id and not constraint_person %}</b>{% endif %}{% if not forloop.last %}, {% endif %}
+                                                {% endwith %}
+                                            {% endwith %}
+                                        {% endwith %}
+                                    {% endfor %}
+                                   </div>
+                                {% endfor %}
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if session.comments %}{{ session.comments|urlize_ietf_docs|linkify|linebreaksbr }}{% endif %}
+                        </td>
+                    </tr>
+                {% if forloop.last %}</tbody>{% endif %}
+            {% endfor %}
+        </table>
+    {% endfor %}
+{% endblock %}
+{% block js %}
+    <script src="{% static "ietf/js/list.js" %}"></script>
+{% endblock %}

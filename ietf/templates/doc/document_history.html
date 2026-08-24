@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{# Copyright The IETF Trust 2015, All Rights Reserved #}
+{% load origin %}
+{% load ietf_filters %}
+{% load static %}
+{% block title %}
+    History for {{ doc.name }}
+    {% if doc.rev %}-{{ doc.rev }}{% endif %}
+{% endblock %}
+{% block pagehead %}
+    <link rel="alternate"
+          type="application/atom+xml"
+          href="/feed/document-changes/{{ doc.name }}/">
+    <link rel="stylesheet" href="{% static 'ietf/css/list.css' %}">
+{% endblock %}
+{% block content %}
+    {% origin %}
+    {{ top|safe }}
+    {% if diff_revisions and diff_revisions|length > 1 or doc.name|rfcbis %}
+        <h2 class="my-3">Revision differences</h2>
+        {% include "doc/document_history_form.html" with doc=doc diff_revisions=diff_revisions action=rfcdiff_base_url snapshot=snapshot only %}
+    {% endif %}
+    {% if ballot_doc_rev %}
+        <p class="alert alert-info my-3">
+            Your most recent ballot position was provided when the document was at version {{ ballot_doc_rev }}.
+        </p>
+    {% endif %}
+    <h2 class="my-3">Document history</h2>
+    {% if doc.came_from_draft %}
+        <ul class="nav nav-tabs my-3">
+            <li class="nav-item">
+                <a class="nav-link active">RFC {{doc.name|slice:"3:"}}</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'ietf.doc.views_doc.document_history' name=doc.came_from_draft.name %}">{{doc.came_from_draft.name}}</a>
+            <li>
+        </ul>
+    {% endif %}
+    {% if doc.became_rfc %}
+        <ul class="nav nav-tabs my-3">
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'ietf.doc.views_doc.document_history' name=doc.became_rfc.name %}">RFC {{doc.became_rfc.name|slice:"3:"}}</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link active">{{doc.name}}</a>
+            <li>
+        </ul>
+    {% endif %}
+
+    {% if can_add_comment %}
+        <div class="buttonlist">
+            <a class="btn btn-primary"
+               href="{% url 'ietf.doc.views_doc.add_comment' name=doc.name %}">
+                <i class="bi bi-plus"></i>
+                Add comment
+            </a>
+        </div>
+    {% endif %}
+    <table class="table table-sm table-striped tablesorter">
+        <thead>
+            <tr>
+                <th scope="col" data-sort="date">Date</th>
+                {% if doc.type_id not in "rfc,bcp,std,fyi" %}<th scope="col" data-sort="rev">Rev.</th>{% endif %}
+                <th scope="col" data-sort="by">By</th>
+                <th scope="col" data-sort="action">Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for e in events %}
+                <tr id="history-{{ e.pk }}">
+                    <td>
+                        <div title="{{ e.time|date:'Y-m-d H:i:s O' }}">{{ e.time|date:"Y-m-d" }}</div>
+                    </td>
+                    {% if doc.type_id not in "rfc,bcp,std,fyi" %}<td class="text-end">{{ e.rev }}</td>{% endif %}
+                    <td>{{ e.by|escape }}</td>
+                    <td>{{ e.desc|format_history_text }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}
+{% block js %}
+    <script src="{% static "ietf/js/list.js" %}"></script>
+{% endblock %}

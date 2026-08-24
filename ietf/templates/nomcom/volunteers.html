@@ -1,0 +1,46 @@
+{% extends public|yesno:"nomcom/nomcom_public_base.html,nomcom/nomcom_private_base.html" %}
+{# Copyright The IETF Trust 2021, All Rights Reserved #}
+{% load origin %}
+{% load django_bootstrap5 textfilters person_filters ietf_filters%}
+{% load static %}
+{% block subtitle %}- Volunteers{% endblock %}
+{% block nomcom_content %}
+    {% origin %}
+    <h2>Volunteers for {{ nomcom.group }}</h2>
+    {% if not public %}
+        <a class="btn btn-primary" role="button" href="{% url 'ietf.nomcom.views.private_volunteers_csv' year=year %}">Download as csv</a>
+        <a class="btn btn-primary" role="button" href="{% url 'ietf.nomcom.views.qualified_volunteer_list_for_announcement' year=year %}">View simplified list of only qualified volunteers</a>
+    {% endif %}
+    {% regroup volunteers by eligible as volunteers_by_eligibility %}
+    {% for eligibility_group in volunteers_by_eligibility %}
+        <h3 class="mt-3">{{ eligibility_group.grouper|yesno:"Eligible, Not Eligible" }}</h3>
+        <table class="table table-sm table-striped tablesorter">
+            <thead>
+                <tr>
+                    <th scope="col"></th>
+                    <th scope="col" data-sort="last">Last name</th>
+                    <th scope="col" data-sort="first">First name</th>
+                    <th scope="col" data-sort="plain">Plain name</th>
+                    <th scope="col" data-sort="page">Profile page</th>
+                    <th scope="col" data-sort="affiliation">Affiliation</th>
+                    <th scope="col" data-sort="primary">Primary email</th>
+                    <th scope="col" data-sort="qualifications">Qualifications</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for v in eligibility_group.list %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ v.person.last_name|split:'+'|join:'+<wbr>' }}</td>
+                        <td>{{ v.person.first_name }}</td>
+                        <td>{{ v.person.ascii_name }}</td>
+                        <td>{% person_link v.person %}</td>
+                        <td>{{ v.affiliation }}</td>
+                        <td>{{ v.person.email|linkify }}</td>
+                        <td>{{ v.qualifications }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endfor %}
+{% endblock %}

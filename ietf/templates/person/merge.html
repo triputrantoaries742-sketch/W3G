@@ -1,0 +1,24 @@
+{# Copyright The IETF Trust 2018-2025, All Rights Reserved #}
+{% extends "base.html" %}
+{% load static %}
+{% load django_bootstrap5 %}
+{% block title %}Merge Persons{% endblock %}
+{% block content %}
+    <h1>Merge Person Records</h1>
+    <p class="alert alert-info my-3">
+        This tool will merge two Person records into one.  If both records have logins and you want to retain the one on the left, use the Swap button to swap source and target records.
+    </p>
+    <form method="GET" action="{% url 'ietf.person.views.merge_submit' %}">
+        <div class="row mt-3">
+            <div class="col-md-6">
+                {% bootstrap_field form.source %}
+            </div>
+            <div class="col-md-6">
+                {% bootstrap_field form.target %}
+            </div>
+        </div>
+        <button type="submit" class="btn btn-warning" title="Get Person information">
+            Get Info
+        </button>
+    </form>
+{% endblock %}

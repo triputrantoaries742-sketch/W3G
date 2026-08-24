@@ -1,0 +1,244 @@
+name: Build Dev and Deploy
+run-name: Dev Build ${{ github.run_number }} of branch ${{ github.ref_name }} by @${{ github.actor }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: 'Deploy to K8S'
+        default: 'Skip'
+        required: true
+        type: choice
+        options:
+          - Skip
+          - Dev
+          - Staging
+      deployStrategy:
+        description: 'Deploy Strategy (Staging Only)'
+        default: 'Recreate'
+        required: true
+        type: choice
+        options:
+          - Recreate
+          - RollingUpdate
+          - Current
+      devNoDbRefresh:
+        description: 'Disable Daily DB Refresh (Dev Only)'
+        default: false
+        required: true
+        type: boolean
+      skipTests:
+        description: 'Skip Tests'
+        default: false
+        required: true
+        type: boolean
+      skipArmBuild:
+        description: 'Skip ARM64 Build'
+        default: false
+        required: true
+        type: boolean
+      ignoreLowerCoverage:
+        description: 'Ignore Lower Coverage'
+        default: false
+        required: true
+        type: boolean
+      updateCoverage:
+        description: 'Update Baseline Coverage'
+        default: false
+        required: true
+        type: boolean
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # -----------------------------------------------------------------
+  # PREPARE
+  # -----------------------------------------------------------------
+  prepare:
+    name: Prepare
+    runs-on: ubuntu-latest
+    outputs:
+      buildVersion: ${{ steps.buildvars.outputs.buildVersion }}
+      previousVersion: ${{ steps.semver.outputs.current }}
+      baseImageVersion: ${{ steps.baseimgversion.outputs.baseImageVersion }}
+
+    steps:   
+    - uses: actions/checkout@v7
+      with:
+        fetch-depth: 1
+        fetch-tags: false
+
+    - name: Get Dev Version
+      id: semver
+      uses: ietf-tools/semver-action@v1
+      with:
+        token: ${{ github.token }}
+        branch: release
+        skipInvalidTags: true
+        noVersionBumpBehavior: 'current'
+        noNewCommitBehavior: 'current'
+    
+    - name: Set Build Variables
+      id: buildvars
+      run: |
+        SHORT_SHA="${GITHUB_SHA:0:7}"
+        echo "Will set build version to: ${{ steps.semver.outputs.nextMajorStrict }}.0.0-dev.$SHORT_SHA"
+        echo "buildVersion=${{ steps.semver.outputs.nextMajorStrict }}.0.0-dev.$SHORT_SHA" >> $GITHUB_OUTPUT
+        echo "::notice::Non-production build ${{ steps.semver.outputs.nextMajorStrict }}.0.0-dev.$SHORT_SHA created using branch $GITHUB_REF_NAME"
+
+    - name: Get Base Image Target Version
+      id: baseimgversion
+      run: |
+        echo "baseImageVersion=$(sed -n '1p' dev/build/TARGET_BASE)" >> $GITHUB_OUTPUT
+
+  # -----------------------------------------------------------------
+  # TESTS
+  # -----------------------------------------------------------------
+  tests:
+    name: Run Tests
+    uses: ./.github/workflows/reusable-tests.yml
+    if: ${{ inputs.skipTests == 'false' }}
+    needs: [prepare]
+    secrets: inherit
+    with:
+      ignoreLowerCoverage: ${{ inputs.ignoreLowerCoverage == 'true' }}
+      skipSelenium: true
+      targetBaseVersion: ${{ needs.prepare.outputs.baseImageVersion }}
+
+  # -----------------------------------------------------------------
+  # BUILD IMAGE
+  # -----------------------------------------------------------------
+  build:
+    name: Build Image
+    uses: ./.github/workflows/reusable-build.yml
+    if: ${{ !failure() && !cancelled() }}
+    needs: [tests, prepare]
+    permissions:
+      contents: write
+      packages: write
+    secrets: inherit
+    with:
+      buildVersion: ${{ needs.prepare.outputs.buildVersion }}
+      isReleaseBuild: false
+      previousVersion: ${{ needs.prepare.outputs.previousVersion }}
+      handleCoverageResults: ${{ inputs.skipTests == 'false' }}
+      updateCoverageBaseline: ${{ inputs.updateCoverage }}
+      baseImageVersion: ${{ needs.prepare.outputs.baseImageVersion }}
+      skipArmBuild: ${{ inputs.skipArmBuild }}
+        
+  # -----------------------------------------------------------------
+  # NOTIFY
+  # -----------------------------------------------------------------
+  notify:
+    name: Notify
+    if: ${{ always() }}
+    needs: [prepare, tests, build]
+    runs-on: ubuntu-latest
+    env:
+      BUILD_VERSION: ${{ needs.prepare.outputs.buildVersion }}
+        
+    steps:      
+    - name: Notify on Slack (Success)
+      if: ${{ !contains(join(needs.*.result, ','), 'failure') }}
+      uses: slackapi/slack-github-action@v3
+      with:
+        token: ${{ secrets.SLACK_GH_BOT }}
+        method: chat.postMessage
+        payload: |
+          channel: ${{ secrets.SLACK_GH_BUILDS_CHANNEL_ID }}
+          text: "Datatracker Dev Build <https://github.com/ietf-tools/datatracker/actions/runs/${{ github.run_id }}|${{ env.BUILD_VERSION }}> by ${{ github.triggering_actor }}"
+          attachments:
+            - color: "28a745"
+              fields:
+                - title: "Status"
+                  short: true
+                  value: "Completed"
+    - name: Notify on Slack (Failure)
+      if: ${{ contains(join(needs.*.result, ','), 'failure') }}
+      uses: slackapi/slack-github-action@v3
+      with:
+        token: ${{ secrets.SLACK_GH_BOT }}
+        method: chat.postMessage
+        payload: |
+          channel: ${{ secrets.SLACK_GH_BUILDS_CHANNEL_ID }}
+          text: "Datatracker Dev Build <https://github.com/ietf-tools/datatracker/actions/runs/${{ github.run_id }}|${{ env.BUILD_VERSION }}> by ${{ github.triggering_actor }}"
+          attachments:
+            - color: "a82929"
+              fields:
+                - title: "Status"
+                  short: true
+                  value: "Failed 😱"
+        
+  # -----------------------------------------------------------------
+  # DEV
+  # -----------------------------------------------------------------
+  dev:
+    name: Deploy to Dev
+    if: ${{ !failure() && !cancelled() && inputs.deploy == 'Dev' }}
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    environment:
+      name: dev
+    env:
+      BUILD_VERSION: ${{ needs.prepare.outputs.buildVersion }}
+      
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          
+      - name: Get Deploy Name
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          echo "Install Get Deploy Name CLI dependencies..."
+          cd dev/k8s-get-deploy-name
+          npm ci
+          echo "Get Deploy Name..."
+          echo "DEPLOY_NAMESPACE=$(node cli.js --branch ${{ github.ref_name }})" >> "$GITHUB_ENV"
+
+      - name: Deploy to dev
+        uses: ietf-tools/workflow-dispatch-action@v1
+        with:
+          workflow: deploy-dev.yml
+          repo: ietf-tools/infra-k8s
+          ref: main
+          token: ${{ secrets.GH_INFRA_K8S_TOKEN }}
+          inputs: '{ "app":"datatracker", "appVersion":"${{ env.BUILD_VERSION }}", "remoteRef":"${{ github.sha }}", "namespace":"${{ env.DEPLOY_NAMESPACE }}", "disableDailyDbRefresh":${{ inputs.devNoDbRefresh }} }'
+          waitForCompletionTimeout: 60m
+
+  # -----------------------------------------------------------------
+  # STAGING
+  # -----------------------------------------------------------------
+  staging:
+    name: Deploy to Staging
+    if: ${{ !failure() && !cancelled() && inputs.deploy == 'Staging' }}
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+    env:
+      BUILD_VERSION: ${{ needs.prepare.outputs.buildVersion }}
+      
+    steps:
+      - name: Refresh Staging DB
+        uses: ietf-tools/workflow-dispatch-action@v1
+        with:
+          workflow: deploy-db.yml
+          repo: ietf-tools/infra-k8s
+          ref: main
+          token: ${{ secrets.GH_INFRA_K8S_TOKEN }}
+          inputs: '{ "environment":"${{ secrets.GHA_K8S_CLUSTER }}", "app":"datatracker", "manifest":"postgres", "forceRecreate":true, "restoreToLastFullSnapshot":true, "waitClusterReady":true }'
+          waitForCompletionTimeout: 120m
+
+      - name: Deploy to staging
+        uses: ietf-tools/workflow-dispatch-action@v1
+        with:
+          workflow: deploy.yml
+          repo: ietf-tools/infra-k8s
+          ref: main
+          token: ${{ secrets.GH_INFRA_K8S_TOKEN }}
+          inputs: '{ "environment":"${{ secrets.GHA_K8S_CLUSTER }}", "app":"datatracker", "appVersion":"${{ env.BUILD_VERSION }}", "remoteRef":"${{ github.sha }}", "deployStrategy":"${{ inputs.deployStrategy }}" }'
+          waitForCompletionTimeout: 30m

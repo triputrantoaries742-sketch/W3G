@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{# Copyright The IETF Trust 2017, All Rights Reserved #}
+{% load origin %}
+{% load ietf_filters static textfilters htmlfilters %}
+{% block pagehead %}
+    <link rel="stylesheet" href="{% static "ietf/css/list.css" %}">
+{% endblock %}
+{% block title %}IETF {{ meetings.0.number }}: Important Dates{% endblock %}
+{% block content %}
+    {% origin %}
+    <h1>Important Dates</h1>
+    <a class="btn btn-primary"
+       href="webcal://{{ request.get_host }}{% url 'ietf.meeting.views.important_dates' output_format='ics' %}">
+        Calendar subscription
+    </a>
+    <a class="btn btn-primary"
+       href="{% url 'ietf.meeting.views.important_dates' output_format='ics' %}">
+        Calendar download
+    </a>
+    {% for meeting in meetings %}
+        {% if meeting.show_important_dates %}
+            <h2 class="mt-5" id="IETF{{ meeting.number }}">
+                IETF {{ meeting.number }}
+                <br>
+                <small class="text-body-secondary">{{ meeting.date }}, {{ meeting.city }}, {{ meeting.country }}</small>
+            </h2>
+            <table class="table table-striped tablesorter">
+                <thead>
+                    <tr>
+                        <th scope="col" data-sort="date">Date</th>
+                        <th scope="col">Weekday</th>
+                        <th scope="col">Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% with first=forloop.first %}
+                        {% for d in meeting.importantdate_set.all %}
+                            <tr>
+                                <th scope="row">{{ d.date }}</th>
+                                <td>
+                                    {% if d.name.slug == 'openreg' %}
+                                        Week of
+                                    {% else %}
+                                        {{ d.date|date:'l' }}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {{ d.name.desc|urlize_ietf_docs|markdown|linkify }}{% if d.name.desc|slice:"-1:" != "." %}.{% endif %}
+                                    {% if d.name.slug == 'draftwgagenda' or d.name.slug == 'revwgagenda' or d.name.slug == 'procsub' or d.name.slug == 'revslug' %}
+                                        Upload using the
+                                        <a href="{% url 'ietf.meeting.views.materials' num=meeting.number %}">Meeting Materials Management Tool</a>.
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    {% endwith %}
+                </tbody>
+            </table>
+        {% endif %}
+    {% endfor %}
+    <div id="cal" class="navskip mt-5"></div>
+{% endblock %}
+{% block js %}
+    <script src="{% static "ietf/js/list.js" %}"></script>
+    <script src="{% static 'ietf/js/fullcalendar.js' %}"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function (event) {
+            const el = document.getElementById("cal");
+            var calendar = new FullCalendar(el, {
+                plugins: [dayGridPlugin, bootstrap5Plugin, iCalendarPlugin],
+                themeSystem: 'bootstrap5',
+                displayEventTime: false,
+                eventDidMount: function (info) {
+                    $(info.el)
+                        .tooltip({
+                            title: info.event.title + ": " + info.event.extendedProps.description
+                        });
+                },
+                events: {
+                    url: "{% url 'ietf.meeting.views.important_dates' output_format='ics' %}",
+                    format: "ics"
+                }
+            });
+            calendar.render();
+        });
+    </script>
+{% endblock %}

@@ -1,0 +1,35 @@
+{% if file_urls %}
+    <div class="buttonlist">
+    {% for label, url in file_urls %}
+        {% if label != skip_format %}
+        <a class="btn btn-primary btn-sm"
+          {% if label == 'pdf' or label == 'pdfized' %}
+            download="{% if not snapshot and doc.type_id == 'rfc' %}rfc{{ doc.rfc_number }}{% else %}{{ doc.name }}-{{ doc.rev }}{% endif %}.pdf"
+          {% comment %}
+          TODO: determine if we want bibtex to jiust download
+          {% elif label == 'bibtex' %}
+            download="{% if not snapshot and doc.type_id == 'rfc' %}rfc{{ doc.rfc_number }}{% else %}{{ doc.name }}-{{ doc.rev }}{% endif %}.bib"
+          {% endcomment %}
+         {% endif %}
+          {% if label != 'htmlized' %}target="_blank"{% endif %}
+          href="{{ url }}">
+            {% if label == 'pdf' or label == 'pdfized' %}
+                <i class="bi bi-file-pdf"></i> pdf
+            {% elif label == 'xml' or label == 'html' or label == 'bibxml' %}
+                <i class="bi bi-file-code"></i> {{ label}}
+            {% elif label == 'htmlized' %}
+                <i class="bi bi-file-code"></i> htmlized
+            {% elif label == 'bibtex' %}
+                <i class="bi bi-file-ruled"></i> bibtex
+            {% elif label == 'plain text' %}
+                <i class="bi bi-file-text"></i> txt
+            {% elif label == 'with errata' %}
+                <i class="bi bi-file-diff"></i> w/errata
+            {% endif %}
+        </a>
+        {% endif %}
+    {% endfor %}
+</div>
+{% else %}
+    <span class="text-body-secondary">(not online)</span>
+{% endif %}

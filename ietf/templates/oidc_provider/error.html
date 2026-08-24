@@ -1,0 +1,14 @@
+{# Copyright The IETF Trust 2007, All Rights Reserved #}
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Permission Error{% endblock %}
+{% block content %}
+    {% include "logo.html" with org="ietf" classes="col-2 mb-5" only %}
+    <div class="alert alert-warning my-3">
+        <h2>{{ error }}</h2>
+        <hr>
+        <p class="mb-0">
+            {{ description }}
+        </p>
+    </div>
+{% endblock %}

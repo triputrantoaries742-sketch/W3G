@@ -1,0 +1,56 @@
+{% extends "submit/submit_base.html" %}
+{# Copyright The IETF Trust 2015-2026, All Rights Reserved #}
+{% load origin static %}
+{% block pagehead %}
+    <link rel="stylesheet" href="{% static "ietf/css/list.css" %}">
+{% endblock %}
+{% block title %}I-D submissions awaiting manual posting{% endblock %}
+{% load ietf_filters %}
+{% block submit_content %}
+    {% origin %}
+    <h2 class="mt-3" id="man_post">Submissions needing manual posting</h2>
+    {% if not manual %}
+        <p class="alert alert-info my-3" id="no-manual">
+            There are no submissions needing manual posting.
+        </p>
+    {% else %}
+        <table id="manual"
+               class="submissions table table-sm table-striped tablesorter">
+            <thead>
+                <tr>
+                    <th scope="col" data-sort="draft">Internet-Draft</th>
+                    <th scope="col" data-sort="date">Submitted</th>
+                    <th scope="col" data-sort="passes">Passes Checks</th>
+                    <th scope="col" data-sort="metadata">Metadata</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in manual %}
+                    <tr>
+                        <td>
+                            <a href="{% url "ietf.submit.views.submission_status" submission_id=s.pk %}">{{ s.name }}-{{ s.rev }}</a>
+                        </td>
+                        <td>{{ s.submission_date }}</td>
+                        <td>
+                            {% if s.passes_checks %}
+                                <span class="text-success">Ok</span>
+                            {% else %}
+                                <span class="text-danger">Fails</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if s.errors %}
+                                <span class="text-danger">Errors</span>
+                            {% else %}
+                                <span class="text-success">Ok</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
+{% endblock %}
+{% block js %}
+    <script src="{% static "ietf/js/list.js" %}"></script>
+{% endblock %}

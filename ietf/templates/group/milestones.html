@@ -1,0 +1,60 @@
+{# Copyright The IETF Trust 2015, All Rights Reserved #}
+{% load origin ietf_filters %}
+{% origin %}
+{# assumes group and milestones is in context #}
+{% regroup milestones by resolved as milestonegroups %}
+{% for milestoneset in milestonegroups %}
+    {% if heading %}
+        <h2 class="my-3">
+            {% if milestoneset.grouper %}
+                {{ milestoneset.grouper|title }} milestones
+            {% else %}
+                {% if group.state_id == "proposed" %}
+                    Proposed milestones
+                {% else %}
+                    Milestones
+                {% endif %}
+            {% endif %}
+        </h2>
+    {% endif %}
+    <table class="table table-sm table-striped tablesorter">
+        <thead>
+            <tr>
+                <th class="col-2" scope="col"{% if group.uses_milestone_dates %} data-sort="num"{% endif %} data-default-sort="asc">
+                    {% if group.uses_milestone_dates %}
+                        Date
+                    {% else %}
+                        Order
+                    {% endif %}
+                </th>
+                <th class="col-5" scope="col" data-sort="milestone">Milestone</th>
+                <th class="col-5" scope="col" data-sort="docs">Associated documents</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for milestone in milestoneset.list reversed %}
+                <tr>
+                    <td>
+                        {% if milestone.resolved %}
+                            <span class="badge rounded-pill {% if milestone.resolved|slugify == 'done' %}text-bg-success{% else %}text-bg-warning{% endif %}">{{ milestone.resolved|title }}</span>
+                        {% else %}
+                            {% if group.uses_milestone_dates %}
+                                 <span class="d-none" aria-hidden="true">{{ milestone.due }}</span>{{ milestone.due|date:"M Y" }}
+                            {% else %}
+                                {% if forloop.first %}Last{% endif %}
+                                {% if forloop.last %}Next{% endif %}
+                            {% endif %}
+                        {% endif %}
+                    </td>
+                    <td>{{ milestone.desc|urlize_ietf_docs }}</td>
+                    <td>
+                        {% for d in milestone.docs.all %}
+                            <a href="{% url "ietf.doc.views_doc.document_main" name=d.name %}">{% if d.became_rfc %}{{ d.became_rfc }} (was {% endif %}{{ d.name }}{% if d.became_rfc %}){% endif %}</a>
+                            <br>
+                        {% endfor %}
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endfor %}

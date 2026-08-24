@@ -1,0 +1,18 @@
+{# Copyright The IETF Trust 2007, All Rights Reserved #}
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Error: Restricted Access{% endblock %}
+{% block content %}
+    {% include "logo.html" with org="ietf" classes="col-2 mb-5" only %}
+    <div class="alert alert-warning my-3">
+        <h1>Restricted Access</h1>
+        <hr>
+        <p>
+            {{ exception }}
+        </p>
+        <p class="mb-0">
+            If you think this is a server error, please contact
+            <a href="mailto:{{ bugreport_email }}">{{ bugreport_email }}</a>.
+        </p>
+    </div>
+{% endblock %}

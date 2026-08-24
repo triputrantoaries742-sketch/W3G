@@ -1,0 +1,37 @@
+{# Copyright The IETF Trust 2024, All Rights Reserved #}
+{% extends "base.html" %}
+{% load static %}
+{% load ietf_filters %}
+{% load django_bootstrap5 %}
+{% block title %}Announcement{% endblock %}
+{% block content %}
+    <h1>Announcement</h1>
+
+
+    <div class="module">
+        <h2>Confirm Announcement</h2>
+
+        <form action="{% url 'ietf.secr.announcement.views.confirm' %}" method="post">{% csrf_token %}
+
+            <pre id="announce-confirm">
+To: {{ to }}
+From: {{ message.frm }}
+Cc: {{ message.cc }}
+Bcc: {{ message.bcc }}
+Reply To: {{ message.reply_to }}
+Subject: {{ message.subject }}
+
+{{ message.body }}
+            </pre>
+
+            {% bootstrap_form form %}
+
+            <div class="d-flex justify-content-around">
+                <button class="btn btn-primary" type="submit" name="submit" value="Send">Send</button>
+                <button class="btn btn-secondary" type="button" onclick="history.go(-1);return false">Back</button>
+                <button class="btn btn-danger" type="submit" name="submit" value="Cancel">Cancel</button>
+            </div>
+        </form>
+    </div> <!-- module -->
+
+{% endblock %}

@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{# Copyright The IETF Trust 2015-2021, All Rights Reserved #}
+{% load origin %}
+{% load static %}
+{% load ietf_filters %}
+{% load textfilters %}
+{% load htmlfilters agenda_custom_tags %}
+{% load django_vite %}
+{% block title %}
+    IETF {{ meetingData.meetingNumber }} Meeting Agenda
+{% endblock %}
+{% block pagehead %}
+    <!-- AGENDA VUE COMPONENT -->
+    <!-- [html-validate-disable-block void-style, attribute-empty-style] -->
+    {{ meetingData|json_script:"meeting-data" }}
+    {% vite_asset 'client/main.js' %}
+{% endblock %}
+{% block morecss %}
+
+/* Avoid hiding the page footer when on mobile with the footer toolbar overlay */
+@media screen and (max-width: 992px) {
+    body {
+        padding-bottom: 50px;
+    }
+}
+
+@keyframes initspinner {
+    to { transform: rotate(360deg); }
+}
+
+#app-loading {
+    position: fixed;
+    top: 60px;
+    left: 0;
+    width: 100%;
+    height: calc(100% - 60px);
+    background-color: rgba(255,255,255,.75);
+    z-index: 2000000000;
+    backdrop-filter: blur(10px);
+}
+
+.theme-dark #app-loading {
+    background-color: rgba(0,0,0,.75);
+}
+
+#app-loading:before {
+    content: '';
+    box-sizing: border-box;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 50px;
+    height: 50px;
+    margin-top: -25px;
+    margin-left: -25px;
+    border-radius: 50%;
+    border-top: 2px solid #999;
+    border-right: 2px solid transparent;
+    animation: initspinner .6s linear infinite;
+    z-index: 2000000000;
+}
+
+.theme-dark #app-loading:before {
+    border-top-color: #FFF;
+}
+
+#app-loading:after {
+    content: 'Loading meeting {{ meetingData.meetingNumber }}...';
+    position: absolute;
+    text-align: center;
+    top: 50%;
+    margin-top: -100px;
+    left: 0;
+    right: 0;
+    font-weight: 500;
+    color: #999;
+    z-index: 2000000000;
+}
+
+.theme-dark #app-loading:after {
+    color: #FFF;
+}
+
+#app-loading-footer {
+    position: absolute;
+    text-align: center;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000000000;
+}
+
+.theme-dark #app-loading-footer .btn-light {
+    background-color: rgba(255,255,255,.1) !important;
+    border-color: rgba(255,255,255,.05) !important;
+    color: #FFF !important;
+}
+{% endblock %}
+{% block content %}
+    {% origin %}
+    <div id="app"></div>
+    <div id="app-loading">
+        <div id="app-loading-footer">
+            <a class="btn btn-light text-body-secondary mb-3" href="/meeting/{{ meetingData.meetingNumber }}/agenda.txt"><small>Switch to text-only version &raquo;</small></a>
+        </div>
+    </div>
+{% endblock %}

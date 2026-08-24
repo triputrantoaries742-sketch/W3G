@@ -1,0 +1,19 @@
+{% extends "submit/submit_base.html" %}
+{# Copyright The IETF Trust 2015, All Rights Reserved #}
+{% load origin %}
+{% load django_bootstrap5 %}
+{% block title %}Submission status{% endblock %}
+{% block submit_content %}
+    {% origin %}
+    <p class="my-3">
+        Please enter the name of the Internet-Draft you wish to view the
+        submission status of.
+    </p>
+    <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+            {% bootstrap_form form %}
+        </div>
+        <button class="btn btn-primary" type="submit">See status</button>
+    </form>
+{% endblock %}

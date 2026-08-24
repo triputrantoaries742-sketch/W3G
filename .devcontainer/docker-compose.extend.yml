@@ -1,0 +1,21 @@
+services:
+    app:
+        environment:
+            EDITOR_VSCODE: 1
+        volumes:
+            - .:/workspace
+            - /workspace/.parcel-cache
+            - /workspace/__pycache__
+            - /workspace/.vite
+            - /workspace/.yarn/unplugged
+            - app-assets:/assets
+            # - datatracker-vscode-ext:/root/.vscode-server/extensions
+        # Runs app on the same network as the database container, allows "forwardPorts" in devcontainer.json function.
+        network_mode: service:db
+    blobstore:
+        ports:
+            - '9000:9000'
+            - '9001:9001'
+
+volumes:
+    datatracker-vscode-ext:

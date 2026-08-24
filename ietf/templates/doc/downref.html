@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{# Copyright The IETF Trust 2017, All Rights Reserved #}
+{% load origin %}
+{% load django_bootstrap5 %}
+{% load ietf_filters static %}
+{% block pagehead %}
+    <link rel="stylesheet" href="{% static "ietf/css/list.css" %}">
+{% endblock %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+    {% origin %}
+    <h1>{{ title }}</h1>
+    {% if add_button %}
+        <a class="btn btn-warning my-3"
+           href="{% url "ietf.doc.views_downref.downref_registry_add" %}">Add downref</a>
+    {% endif %}
+    <div class="alert alert-info">
+        <p>
+            <a href="https://www.rfc-editor.org/rfc/rfc3967.html">RFC 3967</a>,
+            titled "Clarifying when Standards Track Documents may Refer Normatively to Documents at a Lower Level", specifies the rules for downward references (DOWNREFs):
+        </p>
+        <p class="mb-0">
+            "IETF procedures generally require that a standards track RFC may not have a normative reference to another standards track document at a lower maturity level or to a non standards track specification (other than specifications from other standards bodies). For example, a standards track document may not have a normative reference to an informational RFC. Exceptions to this rule are sometimes needed as the IETF uses informational RFCs to describe non-IETF standards or IETF-specific modes of use of such standards."
+        </p>
+</div>
+    <table class="table table-sm table-striped tablesorter">
+        <thead>
+            <tr>
+                <th scope="col" data-sort="ref">Referenced RFC</th>
+                <th scope="col" data-sort="refby">Internet-Draft making the reference</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for target_doc, source_doc in doc_pairs %}
+                <tr>
+                    <td>
+                        <a href="{% url "ietf.doc.views_doc.document_main" target_doc.name %}">RFC {{ target_doc.rfc_number }}</a>
+                        <br>
+                        <b>{{ target_doc.title }}</b>
+                    </td>
+                    <td>
+                        <a href="{% url "ietf.doc.views_doc.document_main" source_doc.name %}">{{ source_doc.name }}</a>
+                        <br>
+                        <b>{{ source_doc.title }}</b>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}
+{% block js %}
+    <script src="{% static "ietf/js/list.js" %}"></script>
+{% endblock %}

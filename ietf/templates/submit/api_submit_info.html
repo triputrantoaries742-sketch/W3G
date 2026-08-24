@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{# Copyright The IETF Trust 2015-2024, All Rights Reserved #}
+{% load origin ietf_filters %}
+{% block title %}Obsolete I-D submission API notice{% endblock %}
+{% block content %}
+    {% origin %}
+    <h1 class="mb-3">Obsolete Internet-Draft submission API notice</h1>
+    <p>
+        The API endpoint previously available here is obsolete and is no longer supported.
+        Please use the <a href="{% url 'ietf.submit.views.api_submission' %}">new API endpoint</a>
+        instead.
+    </p>
+{% endblock %}

@@ -1,0 +1,62 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Run Server",
+            "type": "python",
+            "request": "launch",
+            "python": "/usr/local/bin/python",
+            "program": "${workspaceFolder}/ietf/manage.py",
+            "args": [
+                "runserver",
+                "0.0.0.0:8001",
+                "--settings=settings_local"
+            ],
+            "django": true,
+            "presentation": {
+                "hidden": false,
+                "group": "main",
+                "order": 1
+            }
+        },
+        {
+            "name": "Run Server in Vite Dev Mode",
+            "type": "python",
+            "request": "launch",
+            "python": "/usr/local/bin/python",
+            "program": "${workspaceFolder}/ietf/manage.py",
+            "args": [
+                "runserver",
+                "0.0.0.0:8001",
+                "--settings=settings_local_vite"
+            ],
+            "django": true,
+            "presentation": {
+                "hidden": false,
+                "group": "main",
+                "order": 1
+            }
+        },
+        {
+            "name": "Run Server with Debug Toolbar",
+            "type": "python",
+            "request": "launch",
+            "python": "/usr/local/bin/python",
+            "program": "${workspaceFolder}/ietf/manage.py",
+            "args": [
+                "runserver",
+                "0.0.0.0:8001",
+                "--settings=settings_local_debug"
+            ],
+            "django": true,
+            "presentation": {
+                "hidden": false,
+                "group": "main",
+                "order": 1
+            }
+        }
+    ]
+}

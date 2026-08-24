@@ -1,0 +1,26 @@
+services:
+    app:
+        ports:
+            - 'CUSTOM_PORT:8000'
+            - '3000:3000'
+        volumes:
+            - .:/workspace
+            - /workspace/.parcel-cache
+            - /workspace/__pycache__
+            - /workspace/.vite
+            - /workspace/.yarn/unplugged
+            - app-assets:/assets
+    db:
+        ports:
+            - '5432'
+    pgadmin:
+        ports:
+            - '5433'
+    blobstore:
+        ports:
+            - '9000:9000'
+            - '9001:9001'
+    celery:
+        volumes:
+            - .:/workspace
+            - app-assets:/assets

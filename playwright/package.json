@@ -18,7 +18,7 @@
     "npm-check-updates": "16.14.18"
   },
   "dependencies": {
-    "@faker-js/faker": "8.4.1",
+    "@faker-js/faker": "10.5.0",
     "lodash": "4.17.21",
     "lodash-es": "4.17.21",
     "luxon": "3.4.4",
